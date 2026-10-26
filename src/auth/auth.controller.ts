@@ -10,7 +10,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle } from '../common/decorators/throttle.decorator.js';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 

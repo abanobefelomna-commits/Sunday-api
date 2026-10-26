@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { RateLimitGuard } from './common/guards/rate-limit.guard.js';
 
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -21,7 +21,6 @@ import { RolesGuard } from './auth/guards/roles.guard.js';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]), // 100 طلب في الدقيقة لكل IP
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
@@ -58,7 +57,7 @@ import { RolesGuard } from './auth/guards/roles.guard.js';
   controllers: [AppController],
   providers: [
     AppService,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
