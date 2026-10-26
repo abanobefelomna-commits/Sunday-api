@@ -55,9 +55,15 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('register')
-  @ApiOperation({ summary: 'إنشاء حساب جديد' })
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'إنشاء حساب جديد وتسجيل الدخول تلقائياً' })
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { refreshToken, ...body } = await this.authService.register(dto);
+    this.setRefreshCookie(res, refreshToken.token, refreshToken.expiresAt);
+    return body;
   }
 
   @Public()

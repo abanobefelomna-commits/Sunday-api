@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { UsersModule } from '../users/users.module.js';
+import { ServantsModule } from '../servants/servants.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { RefreshToken } from './refresh-token.entity.js';
@@ -15,6 +16,7 @@ import { EmailService } from './email.service.js';
 @Module({
   imports: [
     UsersModule,
+    ServantsModule,
     TypeOrmModule.forFeature([RefreshToken]),
     JwtModule.registerAsync({
       global: true,

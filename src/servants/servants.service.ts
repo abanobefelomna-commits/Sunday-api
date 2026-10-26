@@ -109,4 +109,59 @@ export class ServantsService {
     await this.repo.update({ id }, { avatar });
     return { message: avatar ? 'تم رفع الصورة بنجاح' : 'تم حذف الصورة بنجاح', avatar };
   }
+
+  async syncFromUser(data: {
+    name: string;
+    phone: string;
+    email?: string | null;
+    role?: string;
+    avatar?: string | null;
+    grades?: string[];
+  }) {
+    let servant = await this.repo.findOne({
+      where: [
+        { phone: data.phone },
+        ...(data.email ? [{ email: data.email }] : []),
+      ],
+      relations: { classes: true },
+    });
+
+    const arabicRole = data.role === 'admin' ? 'مشرف' : 'خادم';
+
+    let targetClasses: Class[] = [];
+    if (data.grades && data.grades.length > 0) {
+      targetClasses = await this.classRepo.findBy({
+        grade: In(data.grades as any[]),
+      });
+    }
+
+    if (servant) {
+      servant.name = data.name;
+      servant.phone = data.phone;
+      if (data.email) servant.email = data.email;
+      if (data.avatar !== undefined) servant.avatar = data.avatar;
+      if (targetClasses.length > 0) {
+        servant.classes = targetClasses;
+      }
+      return this.repo.save(servant);
+    } else {
+      servant = this.repo.create({
+        name: data.name,
+        phone: data.phone,
+        email: data.email || undefined,
+        role: arabicRole,
+        avatar: data.avatar || null,
+        classes: targetClasses,
+      });
+      return this.repo.save(servant);
+    }
+  }
+
+  async syncAvatarByPhone(phone: string, avatar: string | null) {
+    try {
+      await this.repo.update({ phone }, { avatar });
+    } catch {
+      // ignore if not found
+    }
+  }
 }

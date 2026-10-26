@@ -1,17 +1,43 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Class } from './class.entity.js';
 import { CreateClassDto } from './dto/create-class.dto.js';
 import { UpdateClassDto } from './dto/update-class.dto.js';
 import { FilterClassDto } from './dto/filter-class.dto.js';
+import { Grade } from '../users/role.enum.js';
 
 @Injectable()
-export class ClassesService {
+export class ClassesService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(ClassesService.name);
+
   constructor(
     @InjectRepository(Class)
     private readonly repo: Repository<Class>,
   ) {}
+
+  async onApplicationBootstrap() {
+    await this.seedDefaultClasses();
+  }
+
+  async seedDefaultClasses() {
+    const DEFAULT_CLASSES = [
+      { name: 'فصل سنة أولى ابتدائي', grade: Grade.FIRST, description: 'خدمة وتربية أطفال سنة أولى ابتدائي' },
+      { name: 'فصل سنة ثانية ابتدائي', grade: Grade.SECOND, description: 'خدمة وتربية أطفال سنة ثانية ابتدائي' },
+      { name: 'فصل سنة ثالثة ابتدائي', grade: Grade.THIRD, description: 'خدمة وتربية أطفال سنة ثالثة ابتدائي' },
+      { name: 'فصل سنة رابعة ابتدائي', grade: Grade.FOURTH, description: 'خدمة وتربية أطفال سنة رابعة ابتدائي' },
+      { name: 'فصل سنة خامسة ابتدائي', grade: Grade.FIFTH, description: 'خدمة وتربية أطفال سنة خامسة ابتدائي' },
+      { name: 'فصل سنة سادسة ابتدائي', grade: Grade.SIXTH, description: 'خدمة وتربية أطفال سنة سادسة ابتدائي' },
+    ];
+
+    for (const item of DEFAULT_CLASSES) {
+      const exists = await this.repo.findOne({ where: { grade: item.grade } });
+      if (!exists) {
+        await this.repo.save(this.repo.create(item));
+        this.logger.log(`تم إنشاء ${item.name} تلقائياً`);
+      }
+    }
+  }
 
   create(dto: CreateClassDto) {
     const cls = this.repo.create(dto);

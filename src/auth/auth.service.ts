@@ -20,6 +20,7 @@ import { RefreshTokensService } from './refresh-tokens.service.js';
 import { OtpService } from './otp.service.js';
 import { OtpPurpose } from './otp-purpose.enum.js';
 import { EmailService } from './email.service.js';
+import { ServantsService } from '../servants/servants.service.js';
 
 @Injectable()
 export class AuthService {
@@ -31,6 +32,7 @@ export class AuthService {
     private readonly refreshTokens: RefreshTokensService,
     private readonly otpService: OtpService,
     private readonly emailService: EmailService,
+    private readonly servantsService: ServantsService,
   ) {}
 
   private async sendOtp(user: User, purpose: OtpPurpose): Promise<void> {
@@ -61,7 +63,7 @@ export class AuthService {
     const password = await argon2.hash(dto.password);
 
     try {
-      await this.usersService.create({
+      const user = await this.usersService.create({
         name: dto.name,
         email: dto.email,
         phone: dto.phone,
@@ -71,9 +73,22 @@ export class AuthService {
         emailVerified: true,
       });
 
-      return {
-        message: 'تم إنشاء الحساب بنجاح. يمكنك تسجيل الدخول الآن.',
-      };
+      // إدراج الخادم تلقائياً في قائمة الخدام وربطه بالفصل المختار
+      try {
+        await this.servantsService.syncFromUser({
+          name: user.name,
+          phone: user.phone,
+          email: user.email,
+          role: user.role,
+          avatar: user.avatar,
+          grades: user.grades,
+        });
+      } catch (err) {
+        this.logger.warn(`Could not sync servant for user ${user.id}: ${err}`);
+      }
+
+      // تسجيل الدخول الفوري بعد التسجيل
+      return this.startSession(user);
     } catch (error) {
       if (
         error instanceof QueryFailedError &&
