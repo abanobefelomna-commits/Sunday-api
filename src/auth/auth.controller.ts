@@ -19,7 +19,6 @@ import { UsersService } from '../users/users.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { EmailDto } from './dto/email.dto.js';
-import { VerifyEmailDto } from './dto/verify-email.dto.js';
 import { ResetPasswordDto } from './dto/reset-password.dto.js';
 import { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import { Public } from './decorators/public.decorator.js';
@@ -46,11 +45,7 @@ export class AuthController {
     };
   }
 
-  private setRefreshCookie(
-    res: Response,
-    token: string,
-    expiresAt: Date,
-  ) {
+  private setRefreshCookie(res: Response, token: string, expiresAt: Date) {
     res.cookie(REFRESH_COOKIE, token, {
       ...this.cookieOptions,
       expires: expiresAt,
@@ -60,34 +55,18 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('register')
-  @ApiOperation({ summary: 'إنشاء حساب جديد وإرسال كود التأكيد بالبريد' })
+  @ApiOperation({ summary: 'إنشاء حساب جديد' })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @Post('verify-email')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'تأكيد البريد الإلكتروني باستخدام كود OTP' })
-  async verifyEmail(@Body() dto: VerifyEmailDto) {
-    return this.authService.verifyEmail(dto.email, dto.code);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: 3, ttl: 60_000 } })
-  @Post('resend-verification')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'إعادة إرسال كود تأكيد البريد الإلكتروني' })
-  async resendVerification(@Body() dto: EmailDto) {
-    return this.authService.resendEmailVerification(dto);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'تسجيل الدخول واستلام Access Token و Refresh Token' })
+  @ApiOperation({
+    summary: 'تسجيل الدخول واستلام Access Token و Refresh Token',
+  })
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -115,7 +94,8 @@ export class AuthController {
       throw new UnauthorizedException('توكن التجديد غير موجود');
     }
 
-    const { refreshToken, ...body } = await this.authService.refreshSession(token);
+    const { refreshToken, ...body } =
+      await this.authService.refreshSession(token);
 
     this.setRefreshCookie(res, refreshToken.token, refreshToken.expiresAt);
 
@@ -126,7 +106,9 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'طلب كود استعادة كلمة المرور' })
+  @ApiOperation({
+    summary: 'طلب كود استعادة كلمة المرور بالبريد أو رقم الهاتف',
+  })
   async forgotPassword(@Body() dto: EmailDto) {
     return this.authService.forgotPassword(dto);
   }
@@ -144,10 +126,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'تسجيل الخروج وإبطال الجلسة' })
-  async logout(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     await this.authService.logout(req.cookies?.[REFRESH_COOKIE]);
     res.clearCookie(REFRESH_COOKIE, this.cookieOptions);
 

@@ -24,19 +24,18 @@ export class UsersService {
     return this.repo.findOne({ where: { email } });
   }
 
+  findByEmailOrPhoneIdentifier(identifier: string) {
+    return this.repo.findOne({
+      where: [{ email: identifier }, { phone: identifier }],
+    });
+  }
+
   findByEmailWithPassword(email: string) {
     return this.repo
       .createQueryBuilder('user')
       .addSelect('user.password')
       .where('user.email = :email', { email })
       .getOne();
-  }
-
-  async setEmailVerified(userId: string, verified: boolean) {
-    await this.repo.update(
-      { id: userId },
-      { emailVerified: verified },
-    );
   }
 
   async updatePassword(userId: string, password: string) {

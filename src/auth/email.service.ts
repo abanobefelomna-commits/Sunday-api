@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer from 'nodemailer';
-import { OtpPurpose } from './otp-purpose.enum.js';
 
 @Injectable()
 export class EmailService {
@@ -13,11 +12,7 @@ export class EmailService {
 
   constructor(private readonly config: ConfigService) {}
 
-  async sendOtpEmail(
-    email: string,
-    code: string,
-    purpose: OtpPurpose,
-  ): Promise<void> {
+  async sendOtpEmail(email: string, code: string): Promise<void> {
     const host = this.config.get<string>('SMTP_HOST');
     const port = Number(this.config.get('SMTP_PORT', 465));
     const user = this.config.get<string>('SMTP_USER');
@@ -32,10 +27,7 @@ export class EmailService {
 
     const ttlMinutes = Number(this.config.get('OTP_TTL_MINUTES', 10));
 
-    const isVerification = purpose === OtpPurpose.EMAIL_VERIFICATION;
-    const heading = isVerification
-      ? 'تأكيد البريد الإلكتروني'
-      : 'استعادة كلمة المرور';
+    const heading = 'استعادة كلمة المرور';
 
     const transporter = nodemailer.createTransport({
       host,

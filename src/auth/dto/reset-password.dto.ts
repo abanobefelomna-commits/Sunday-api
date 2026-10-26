@@ -1,17 +1,22 @@
 import { Transform } from 'class-transformer';
 import {
-  IsEmail,
+  IsNotEmpty,
   IsString,
   Matches,
   MaxLength,
   MinLength,
+  Validate,
 } from 'class-validator';
+import { IsEmailOrEgyptianPhone } from './is-email-or-egyptian-phone.validator.js';
 
 export class ResetPasswordDto {
   @Transform(({ value }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )
-  @IsEmail({}, { message: 'الإيميل غير صحيح' })
+  @IsNotEmpty({ message: 'الإيميل أو رقم التليفون مطلوب' })
+  @Validate(IsEmailOrEgyptianPhone, {
+    message: 'أدخل إيميل صحيح أو رقم موبايل مصري صحيح (11 رقم)',
+  })
   email: string;
 
   @IsString()

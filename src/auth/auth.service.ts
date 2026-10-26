@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -38,7 +37,7 @@ export class AuthService {
     const { code } = await this.otpService.createCode(user.id, purpose);
 
     try {
-      await this.emailService.sendOtpEmail(user.email, code, purpose);
+      await this.emailService.sendOtpEmail(user.email, code);
     } catch (error) {
       await this.otpService.invalidateCode(user.id, purpose);
       throw error;
@@ -62,29 +61,25 @@ export class AuthService {
     const password = await argon2.hash(dto.password);
 
     try {
-      const user = await this.usersService.create({
+      await this.usersService.create({
         name: dto.name,
         email: dto.email,
         phone: dto.phone,
         role: dto.role,
         grades: dto.grades,
         password,
-        emailVerified: false,
+        emailVerified: true,
       });
 
-      await this.sendOtp(user, OtpPurpose.EMAIL_VERIFICATION);
-
       return {
-        message: 'تم إنشاء الحساب. افحص بريدك الإلكتروني للحصول على كود التأكيد.',
+        message: 'تم إنشاء الحساب بنجاح. يمكنك تسجيل الدخول الآن.',
       };
     } catch (error) {
       if (
         error instanceof QueryFailedError &&
         (error as any).driverError?.code === '23505'
       ) {
-        throw new ConflictException(
-          'الإيميل أو رقم التليفون مستخدم بالفعل',
-        );
+        throw new ConflictException('الإيميل أو رقم التليفون مستخدم بالفعل');
       }
 
       throw error;
@@ -128,58 +123,16 @@ export class AuthService {
       throw new UnauthorizedException('الإيميل أو الباسورد غلط');
     }
 
-    if (!user.emailVerified) {
-      throw new ForbiddenException(
-        'لازم تؤكد بريدك الإلكتروني قبل تسجيل الدخول',
-      );
-    }
-
     return this.startSession(user);
-  }
-
-  async verifyEmail(email: string, code: string) {
-    const user = await this.usersService.findByEmail(email);
-
-    if (!user) {
-      throw new BadRequestException('الكود غير صحيح أو انتهت صلاحيته');
-    }
-
-    if (user.emailVerified) {
-      return { message: 'البريد الإلكتروني مؤكد بالفعل' };
-    }
-
-    await this.otpService.verifyCode(
-      user.id,
-      OtpPurpose.EMAIL_VERIFICATION,
-      code,
-    );
-
-    await this.usersService.setEmailVerified(user.id, true);
-
-    return { message: 'تم تأكيد البريد الإلكتروني بنجاح. يمكنك تسجيل الدخول الآن.' };
-  }
-
-  async resendEmailVerification(dto: EmailDto) {
-    try {
-      const user = await this.usersService.findByEmail(dto.email);
-
-      if (user && !user.emailVerified) {
-        await this.sendOtp(user, OtpPurpose.EMAIL_VERIFICATION);
-      }
-    } catch {
-      this.logger.warn('Could not process verification email request');
-    }
-
-    return {
-      message: 'إذا كان البريد مسجلًا وغير مؤكّد، فستصلك رسالة بالكود.',
-    };
   }
 
   async forgotPassword(dto: EmailDto) {
     try {
-      const user = await this.usersService.findByEmail(dto.email);
+      const user = await this.usersService.findByEmailOrPhoneIdentifier(
+        dto.email,
+      );
 
-      if (user?.emailVerified) {
+      if (user) {
         await this.sendOtp(user, OtpPurpose.PASSWORD_RESET);
       }
     } catch {
@@ -187,14 +140,17 @@ export class AuthService {
     }
 
     return {
-      message: 'إذا كان البريد مسجلًا ومؤكدًا، فستصلك رسالة لاستعادة كلمة المرور.',
+      message:
+        'إذا كان الحساب مسجلًا، فسيصلك كود استعادة كلمة المرور على بريده الإلكتروني.',
     };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    const user = await this.usersService.findByEmail(dto.email);
+    const user = await this.usersService.findByEmailOrPhoneIdentifier(
+      dto.email,
+    );
 
-    if (!user?.emailVerified) {
+    if (!user) {
       throw new BadRequestException('الكود غير صحيح أو انتهت صلاحيته');
     }
 

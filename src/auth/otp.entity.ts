@@ -1,4 +1,3 @@
-
 import {
   Column,
   CreateDateColumn,
@@ -8,7 +7,6 @@ import {
 } from 'typeorm';
 
 export enum OtpPurpose {
-  EMAIL_VERIFICATION = 'email_verification',
   PASSWORD_RESET = 'password_reset',
 }
 
