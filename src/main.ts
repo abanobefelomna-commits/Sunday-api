@@ -1,12 +1,18 @@
+
+
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import helmet from 'helmet';
+import helmetImport from 'helmet';
+import type { RequestHandler } from 'express';
 import cookieParser from 'cookie-parser';
 import { join } from 'path';
 import { AppModule } from './app.module.js';
+
+// معالجة اختلاف تعريف أنواع Helmet في TypeScript
+const helmet = helmetImport as unknown as () => RequestHandler;
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -17,7 +23,9 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // تمكين استعراض الصور والملفات المرفوعة (Static Assets)
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads',
+  });
 
   // CORS: بنسمح لعناوين الواجهة بتاعتنا بس، مش لأي موقع
   app.enableCors({
@@ -30,6 +38,7 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix('api');
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
